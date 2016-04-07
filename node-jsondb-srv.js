@@ -127,38 +127,39 @@ function handleRequest(socket,request) {
 	}
 	switch(request.oper.toUpperCase()) {
 	case "READ":
-		response(socket,request,d.read(request.data));
+		d.read(request.data,responder);
 		break;
 	case "WRITE":
-		response(socket,request,d.write(request.data));
+		d.write(request.data,responder);
 		break;
 	case "LOCK":
-		response(socket,request,d.lock(request.data));
+		d.lock(request.data,responder);
 		break;
 	case "UNLOCK":
-		response(socket,request,d.unlock(request.data));
+		d.unlock(request.data,responder);
 		break;
 	case "SUBSCRIBE":
-		response(socket,request,d.subscribe(request.data));
+		d.subscribe(request.data,responder);
 		break;
 	case "UNSUBSCRIBE":
-		response(socket,request,d.unsubscribe(request.data));
+		d.unsubscribe(request.data,responder);
 		break;
 	case "ISLOCKED":
-		response(socket,request,d.isLocked(request.data));
+		d.isLocked(request.data,responder);
 		break;
 	case "ISSUBSCRIBED":
-		response(socket,request,d.isSubscribed(request.data));
+		d.isSubscribed(request.data,responder);
 		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
 		break;
 	}
+	
+	function responder(response) {
+		request.data = response;
+		return socket.write(JSON.stringify(request) + "\r\n");
+	}
 	return true;
-}
-function response(socket,request,response) {
-	request.data = response;
-	return socket.write(JSON.stringify(request) + "\r\n");
 }
 function load(dblist) {
 	var dbs = {};
