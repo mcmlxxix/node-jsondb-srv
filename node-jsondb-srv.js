@@ -3,11 +3,10 @@
 	all packets are to be in JSON format, terminated by a CRLF
 		
 	<database_query>:{
-		db 		: <database_name>,
+		id		: <request id>,
+		db 		: <database name>,
 		oper	: <operation>,
-		query	: <record_query>, 
-		lock	: <record_lock>,
-		data	: <record_data>
+		data	: <record query>
 	}
 	
 */
@@ -128,29 +127,28 @@ function handleRequest(socket,request) {
 	}
 	switch(request.oper.toUpperCase()) {
 	case "READ":
-		response(socket,d.read(request.query,request.lock));
+		response(socket,request,d.read(request.data));
 		break;
 	case "WRITE":
-		//response(socket,d.write(request.query,request.lock));
-		d.write(request.query,request.lock);
+		response(socket,request,d.write(request.data));
 		break;
 	case "LOCK":
-		response(socket,d.lock(request.query,request.lock));
+		response(socket,request,d.lock(request.data));
 		break;
 	case "UNLOCK":
-		response(socket,d.unlock(request.query));
+		response(socket,request,d.unlock(request.data));
 		break;
 	case "SUBSCRIBE":
-		response(socket,d.subscribe(request.query));
+		response(socket,request,d.subscribe(request.data));
 		break;
 	case "UNSUBSCRIBE":
-		response(socket,d.unsubscribe(request.query));
+		response(socket,request,d.unsubscribe(request.data));
 		break;
 	case "ISLOCKED":
-		response(socket,d.isLocked(request.query,request.lock));
+		response(socket,request,d.isLocked(request.data));
 		break;
 	case "ISSUBSCRIBED":
-		response(socket,d.isSubscribed(request.query));
+		response(socket,request,d.isSubscribed(request.data));
 		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
@@ -158,8 +156,9 @@ function handleRequest(socket,request) {
 	}
 	return true;
 }
-function response(socket,obj) {
-	return socket.write(JSON.stringify(obj) + "\r\n");
+function response(socket,request,response) {
+	request.data = response;
+	return socket.write(JSON.stringify(request) + "\r\n");
 }
 function load(dblist) {
 	var dbs = {};
