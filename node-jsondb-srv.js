@@ -128,29 +128,29 @@ function handleRequest(socket,request) {
 	}
 	switch(request.oper.toUpperCase()) {
 	case "READ":
-		response(socket,d.read(socket,request.query,request.lock));
+		response(socket,d.read(request.query,request.lock));
 		break;
 	case "WRITE":
-		//response(socket,d.write(socket,request.query,request.lock));
-		d.write(socket,request.query,request.lock);
+		//response(socket,d.write(request.query,request.lock));
+		d.write(request.query,request.lock);
 		break;
 	case "LOCK":
-		response(socket,d.lock(socket,request.query,request.lock));
+		response(socket,d.lock(request.query,request.lock));
 		break;
 	case "UNLOCK":
-		response(socket,d.unlock(socket,request.query));
+		response(socket,d.unlock(request.query));
 		break;
 	case "SUBSCRIBE":
-		response(socket,d.subscribe(socket,request.query));
+		response(socket,d.subscribe(request.query));
 		break;
 	case "UNSUBSCRIBE":
-		response(socket,d.unsubscribe(socket,request.query));
+		response(socket,d.unsubscribe(request.query));
 		break;
 	case "ISLOCKED":
-		response(socket,d.isLocked(socket,request.query,request.lock));
+		response(socket,d.isLocked(request.query,request.lock));
 		break;
 	case "ISSUBSCRIBED":
-		response(socket,d.isSubscribed(socket,request.query));
+		response(socket,d.isSubscribed(request.query));
 		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
