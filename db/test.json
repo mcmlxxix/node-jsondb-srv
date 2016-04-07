@@ -1,0 +1,7 @@
+{
+  people:[
+    {name:"name",score:0},
+    {name:"your face",score:999}
+  ],
+  test:1
+}
