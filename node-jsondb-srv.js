@@ -180,10 +180,11 @@ function init() {
 	net = require('net');
 	fs = require('fs');
 	rl = require('readline');
-	db = require('node-json-db');
+	db = require('node-jsondb');
 	
-	settings = require('./settings');
-	dblist = require('./databases');
+	settings = require('./settings/settings');
+	dblist = require('./settings/databases');
+	//users = require('./settings/users');
 	
 	databases = load(dblist);
 	srv = net.createServer();
