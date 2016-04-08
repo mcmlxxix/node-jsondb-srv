@@ -12,7 +12,7 @@
 */
 
 /* global variables */
-var fs, db, net, srv, rl, settings, dblist, databases;
+var fs, db, net, srv, rl, settings, dblist, databases, identities;
 log = require('./lib/log');
 
 /* constants */
@@ -49,6 +49,7 @@ function onCreate() {
 function onConnection(socket) {
 	log('connected: ' + socket.remoteAddress,LOG_INFO);
 	socket.setEncoding('utf8');
+	socket.id = identities.shift();
 	socket.ip = socket.remoteAddress;
 	socket.rl = rl.createInterface({
 		input:socket,
@@ -60,6 +61,7 @@ function onConnection(socket) {
 	});
 	socket.on('close',function() {
 		log('disconnected: ' + socket.ip,LOG_INFO);
+		identities.push(socket.id);
 		socket.rl.close();
 	});
 	socket.on('db_error',function(e,txt) {
@@ -127,39 +129,47 @@ function handleRequest(socket,request) {
 	}
 	switch(request.oper.toUpperCase()) {
 	case "READ":
-		d.read(request.data,responder);
+		d.read(request,responder);
 		break;
 	case "WRITE":
-		d.write(request.data,responder);
+		d.write(request,responder);
 		break;
 	case "LOCK":
-		d.lock(request.data,responder);
+		d.lock(request,responder);
 		break;
 	case "UNLOCK":
-		d.unlock(request.data,responder);
+		d.unlock(request,responder);
 		break;
 	case "SUBSCRIBE":
-		d.subscribe(request.data,responder);
+		d.subscribe(request,responder);
 		break;
 	case "UNSUBSCRIBE":
-		d.unsubscribe(request.data,responder);
+		d.unsubscribe(request,responder);
 		break;
 	case "ISLOCKED":
-		d.isLocked(request.data,responder);
+		d.isLocked(request,responder);
 		break;
 	case "ISSUBSCRIBED":
-		d.isSubscribed(request.data,responder);
+		d.isSubscribed(request,responder);
 		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
 		break;
 	}
 	
-	function responder(response) {
+	function responder(request,response) {
 		request.data = response;
+		request.time = Date.now();
+		request.id = socket.id;
 		return socket.write(JSON.stringify(request) + "\r\n");
 	}
 	return true;
+}
+function getPool(num) {
+	var pool = [];
+	for(var i=0;i<num;i++)
+		pool.push(i);
+	return pool;
 }
 function load(dblist) {
 	var dbs = {};
@@ -186,6 +196,7 @@ function init() {
 	dblist = require('./settings/databases');
 	//users = require('./settings/users');
 	
+	identities = getPool(settings.maxconnections);
 	databases = load(dblist);
 	srv = net.createServer();
 	srv.on('listening',onListen);
