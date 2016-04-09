@@ -1,0 +1,258 @@
+const	
+/* constants  */
+	TRUE = !0,
+	FALSE = !1,
+	STRING = "string",
+	PERIOD = ".",
+	FUNCTION = "function",
+	NULL = null,
+	EMPTY = '',
+	
+/* regular expressions */
+	rxIllegal = /[\[\]<>!*$=~^]/,
+	rxDelimiters = /[\/.$@%:;,#]/,
+	rxTokens = /([A-Za-z0-9_\*@\$\(\)]+(?:\[.+?\])?)/g,
+	rxIndex = /^(\S+)\((\d+)\)$/,
+	rxPairs = /(\(+)?([\w\.\(\)\$\_]+)(?:\s*)([\=\^\!\*\~\>\<\?\$]{1,2})\s*(?:\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^' \&\|\)\(]+)\s*(\)+)?/g,
+	rxCondition = /(\S+)\[(.+)\]/,
+	rxEscQuote = /\\('|")/g;
+	
+/* settings */
+var delimiter = PERIOD;
+var create_missing_properties = false;
+
+/* return value */
+var selection = [];
+	
+/* pair testing conditions */	
+var conditions = {
+	"=": function(l, r) {
+		return l == r;
+	},
+	"==": function(l, r) {
+		return l === r;
+	},
+	"!=": function(l, r) {
+		return l != r;
+	},
+	"<": function(l, r) {
+		return l < r;
+	},
+	"<=": function(l, r) {
+		return l <= r;
+	},
+	">": function(l, r) {
+		return l > r;
+	},
+	">=": function(l, r) {
+		return l >= r;
+	},
+	"~=": function(l, r) {
+		return(l + EMPTY).toLowerCase() === (r + EMPTY).toLowerCase();
+	},
+	"^=": function(l, r) {
+		return !((l + EMPTY).indexOf(r));
+	},
+	"$=": function(l, r) {
+		return(r + EMPTY) === (l + EMPTY).slice(-(r + EMPTY).length);
+	},
+	"*=": function(l, r) {
+		return(l + EMPTY).toLowerCase().indexOf((r + EMPTY).toLowerCase()) !== -1;
+	}
+};
+
+/* trim quotes */
+function qtrim(s) {
+	return(
+		(!s.indexOf("'") 
+		|| !s.indexOf('"')) && (s.slice(-1) === "'" 
+		|| s.slice(-1) === '"')) ? s.slice(1, -1) : s;
+}
+
+/* split a path string into object keys */
+function splitPath(path) {
+	if(rxDelimiters.test(path))
+		delimiter = path.match(rxDelimiters)[0];
+	path = path.match(rxTokens);
+	return path;
+}
+
+/* Matches type of a to b */
+function matchTypes(a, b) {
+	var _a, _b;
+	switch(typeof(a)) {
+	case STRING:
+		_b = b + EMPTY;
+		break;
+	case "boolean":
+		_b = b === "true" ? TRUE : FALSE;
+		break;
+	case "number":
+		_b = +b;
+		break;
+	case "date":
+		_b = new Date(b).valueOf();
+		_a = a.valueOf();
+		break;
+	default:
+		if(a instanceof String) {
+			_a = a + EMPTY;
+			_b = b + EMPTY;
+		}
+		else {
+			_b = b;
+		}
+	}
+		
+	if(b === "null") {
+		_b = NULL;
+	}
+	if(b === "undefined") {
+		_b = undefined;
+	}
+	return {
+		left: (_a || a),
+		right: _b
+	};
+}
+
+/* Condition functions */
+function testPairs(left, right, operator, cfn) {
+	var value = FALSE;
+	var leftValue;
+	if(left.indexOf(PERIOD) >= 0) {
+		leftValue = this;
+	}
+	else {
+		leftValue = this[left];
+	}
+	//We clean up r to remove wrapping quotes and escaped quotes (both single/dbl)
+	var pairs = matchTypes(leftValue, qtrim(right).trim().replace(rxEscQuote, '$1'));
+	if(operator === "?") {
+		if(typeof(cfn) === FUNCTION) {
+			value = cfn.call(this, pairs.left, right);
+		}
+	} else {
+		value = conditions[operator](pairs.left, pairs.right);
+	}
+	return value;
+};
+
+/* do some shit */
+function matchCondition(condition, obj) {
+	//Convert condition pairs to booleans
+	var evalStr = condition.replace(rxPairs, function(match, pl, left, operator, right, pr) {
+		return [pl, testPairs.call(obj, left, right, operator/*, cfn*/), pr].join(EMPTY);
+	});
+	return eval(evalStr);
+}
+
+/* do some shit when a match is found */
+function selectMatch(obj,keys,path,child) {
+	if(keys.length == 1) {
+		selection.push({"path":path,"key":child,"value":obj});
+	}
+	else {
+		traverse(obj,keys.slice(1),path+delimiter+child);
+	}
+}
+
+/* traverse an object and search for the specified path */
+function traverse(obj, keys, path) {
+	//log(JSON.stringify(arguments));
+	key = keys[0];
+	
+	/* if we want everything within the current object */
+	if(key === "*") {
+		for(var i in obj) {
+			selectMatch(obj[i],keys,path,i);
+		}
+		return;
+	}
+	
+	/* if we want the current object (not individually hashed as in the previous case) */
+	if(obj.hasOwnProperty(key)) {
+		//path += delimiter + key;
+		selectMatch(obj[key],keys,path,key);
+		return;
+	}
+	
+	/* if we are traversing an array */
+	if(obj instanceof Array) {
+		for(var i=0;i<obj.length;i++) {
+			if(obj[i] == null)
+				continue;
+			traverse(obj[i],keys,path + delimiter + i);
+		}
+		return;
+	}
+	
+	/* if we are looking for data at a specific index of the current object */
+	if(rxIndex.test(key)) {
+		var idxToken = key.match(rxIndex);
+		key = idxToken[1];
+		index = +idxToken[2];
+		obj = obj[key];
+		path += delimiter + key;
+		selectMatch(obj[index],keys,path,index);
+		return;
+	}
+	
+	/* if we are running a more comparison query */
+	if(rxCondition.test(key)) {
+		var expToken = key.match(rxCondition);
+		var newKey = expToken[1];
+		var condition = expToken[2];
+		var subset = (newKey === "*" ? obj : obj[newKey]);
+
+		if(path == EMPTY)
+			path = newKey;
+		else
+			path += delimiter + newKey;
+		
+		//path += delimiter + newKey;
+		if(subset instanceof Array) {
+			for(i = 0; i<subset.length; i++) {
+				var elem = subset[i];
+				if(elem == null)
+					continue;
+				if(matchCondition(condition, elem)) {
+					selectMatch(elem,keys,path,i);
+				}
+			}
+		} else if(matchCondition(condition, subset)) {
+			selectMatch(subset,keys,path,newKey);
+		}
+		return;
+	}
+	
+	/* if we are creating missing properties as we go */
+	if(create_missing_properties) {
+		selectMatch(obj[key] = {},keys,path,key);
+		return;
+	}
+}
+
+/* query the database */
+function query(obj,data) {
+	selection = [];
+	var keys = splitPath(data.path);
+	if(keys == NULL)
+		selection.push({"path":data.path,"key":data.key,"value":obj});
+	else
+		traverse(obj,keys,"");
+}
+
+/* public methods */
+module.exports.select = function(obj,data) {
+	query(obj,data);
+	return selection;
+}
+
+module.exports.update = function(obj,data) {
+	create_properties = true;
+	query(obj,data);
+	//log("updating path: " + data.path + "/" + data.key + " found: " + selection[0].path + "/" + selection[0].key + "/" + selection[0].value);
+	selection[0].value[data.key] = data.value;
+	create_properties = false;
+}

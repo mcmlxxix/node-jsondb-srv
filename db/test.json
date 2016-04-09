@@ -1,7 +1,36 @@
 {
-  people:[
-    {name:"name",score:0},
-    {name:"your face",score:999}
-  ],
-  test:1
+	"people":[
+		{"name":"mcmlxxix", "score":10},
+		{"name":"echicken", "score":10},
+		{"name":"tits", "score":0},
+		{"name":"vaginas", "score":0},
+		{"name":"dicks", "score":50},
+		{"name":"anus", "score":40}
+	],
+	"test":{
+		"testes":1000,
+		"nipples":2
+	},
+	"herp":{
+		"derp":{"test":1},
+		"merp":{"test":1},
+		"yerp":{"test":1},
+		"ferp":{"test":1}
+	},
+	"derp.derp":{
+		"herp.herp":1
+	},
+	"derp":{
+		"derp":{
+			"herp":{
+				"herp":1
+			}
+		}
+	},
+	"primitive":[
+		"one",
+		"two",
+		"three",
+		"four"
+	]
 }
