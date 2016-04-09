@@ -67,22 +67,22 @@ function onConnection(socket) {
 	socket.on('db_error',function(e,txt) {
 		switch(e) {
 		case ERROR_INVALID_REQUEST:
-			response(socket,'ERROR: invalid request: ' + txt);
+			respond(socket,'ERROR: invalid request: ' + txt);
 			break;
 		case ERROR_INVALID_LOCK:
-			response(socket,'ERROR: invalid lock: ' + txt);
+			respond(socket,'ERROR: invalid lock: ' + txt);
 			break;
 		case ERROR_INVALID_PATH:
-			response(socket,'ERROR: invalid path: ' + txt);
+			respond(socket,'ERROR: invalid path: ' + txt);
 			break;
 		case ERROR_INVALID_OPER:
-			response(socket,'ERROR: invalid operation: ' + txt);
+			respond(socket,'ERROR: invalid operation: ' + txt);
 			break;
 		case ERROR_INVALID_DB:
-			response(socket,'ERROR: invalid database: ' + txt);
+			respond(socket,'ERROR: invalid database: ' + txt);
 			break;
 		default:
-			response(socket,'ERROR: unknown: ' + txt);
+			respond(socket,'ERROR: unknown: ' + txt);
 			break;
 		}
 	});
@@ -109,6 +109,7 @@ function parseRequest(socket,data) {
 	}
 	catch(e) {
 		log(e,LOG_ERROR);
+		log(e.stack,LOG_ERROR);
 		return false;
 	}
 	return result;
@@ -127,43 +128,52 @@ function handleRequest(socket,request) {
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
 		return false;
 	}
+	if(request.id == null) {
+		request.id = socket.id;
+	}
+	//var startTime = Date.now();
 	switch(request.oper.toUpperCase()) {
 	case "READ":
-		d.read(request,responder);
+		d.read(request,callback);
 		break;
 	case "WRITE":
-		d.write(request,responder);
+		d.write(request,callback);
 		break;
 	case "LOCK":
-		d.lock(request,responder);
+		d.lock(request,callback);
 		break;
 	case "UNLOCK":
-		d.unlock(request,responder);
+		d.unlock(request,callback);
 		break;
 	case "SUBSCRIBE":
-		d.subscribe(request,responder);
+		d.subscribe(request,callback);
 		break;
 	case "UNSUBSCRIBE":
-		d.unsubscribe(request,responder);
+		d.unsubscribe(request,callback);
 		break;
 	case "ISLOCKED":
-		d.isLocked(request,responder);
+		d.isLocked(request,callback);
 		break;
 	case "ISSUBSCRIBED":
-		d.isSubscribed(request,responder);
+		d.isSubscribed(request,callback);
 		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
 		break;
 	}
 	
-	function responder(request,response) {
+	function callback(response) {
+		//var endTime = process.hrtime();
+		// if(request.id == null)
+			// request.id = socket.id;
 		request.data = response;
-		request.time = Date.now();
-		request.id = socket.id;
+		//request.elapsed = endTime - startTime;
 		return socket.write(JSON.stringify(request) + "\r\n");
 	}
 	return true;
+}
+function respond(socket,response) {
+	return socket.write(JSON.stringify(response) + "\r\n");
 }
 function getPool(num) {
 	var pool = [];
