@@ -5,8 +5,9 @@
 	NOTE: each user name must be unique. */
 
 users = {	/* 	<name> 			:	<password> */
-				"test"			:	"test"
-				"guest"			:	""
+				"test"			:	"test",
+				"guest"			:	"",
+				"admin"			:	"adminP@$$"
 }
 
 /* dont touch this shit */

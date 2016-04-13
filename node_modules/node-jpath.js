@@ -19,7 +19,7 @@ const
 	
 /* settings */
 var delimiter = PERIOD;
-var create_missing_properties = false;
+var create = false;
 
 /* return value */
 var selection = [];
@@ -227,7 +227,7 @@ function traverse(obj, keys, path) {
 	}
 	
 	/* if we are creating missing properties as we go */
-	if(create_missing_properties) {
+	if(create == true) {
 		selectMatch(obj[key] = {},keys,path,key);
 		return;
 	}
@@ -244,15 +244,38 @@ function query(obj,data) {
 }
 
 /* public methods */
+module.exports.settings = new (function(){
+	this.__defineGetter__('delimiter',function(){
+		return delimiter;
+	});
+	this.__defineSetter__('delimiter',function(value){
+		if(!(rxIllegal.test(value)))
+			delimiter = value;
+	});
+	this.__defineGetter__('create',function(){
+		return create;
+	});
+	this.__defineSetter__('create',function(value){
+		if(typeof value == "boolean")
+			create = value;
+	});
+})();
+
+module.exports.selection = function() {
+	return selection;
+}
+
 module.exports.select = function(obj,data) {
 	query(obj,data);
 	return selection;
 }
 
+/*
 module.exports.update = function(obj,data) {
-	create_properties = true;
+	create = true;
 	query(obj,data);
-	//log("updating path: " + data.path + "/" + data.key + " found: " + selection[0].path + "/" + selection[0].key + "/" + selection[0].value);
 	selection[0].value[data.key] = data.value;
-	create_properties = false;
+	create = false;
+	return data.value;
 }
+*/

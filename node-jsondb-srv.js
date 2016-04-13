@@ -12,7 +12,7 @@
 */
 
 /* global variables */
-var fs, db, net, srv, rl, settings, dblist, databases, identities;
+var fs, db, net, srv, rl, settings, dblist, databases, identities, users;
 log = require('./lib/log');
 
 /* constants */
@@ -133,6 +133,9 @@ function handleRequest(socket,request) {
 	}
 	//var startTime = Date.now();
 	switch(request.oper.toUpperCase()) {
+	case "AUTH":
+		authenticate(request,callback);
+		break;
 	case "READ":
 		d.read(request,callback);
 		break;
@@ -151,12 +154,6 @@ function handleRequest(socket,request) {
 	case "UNSUBSCRIBE":
 		d.unsubscribe(request,callback);
 		break;
-	case "ISLOCKED":
-		d.isLocked(request,callback);
-		break;
-	case "ISSUBSCRIBED":
-		d.isSubscribed(request,callback);
-		break;
 	default:
 		socket.emit('db_error',ERROR_INVALID_OPER,request.oper);
 		break;
@@ -168,12 +165,17 @@ function handleRequest(socket,request) {
 			// request.id = socket.id;
 		request.data = response;
 		//request.elapsed = endTime - startTime;
-		return socket.write(JSON.stringify(request) + "\r\n");
+		return respond(socket,request);
 	}
 	return true;
 }
 function respond(socket,response) {
-	return socket.write(JSON.stringify(response) + "\r\n");
+	var str = JSON.stringify(response) + "\r\n";
+	log('>> ' + str,LOG_DEBUG);
+	return socket.write(str);
+}
+function authenticate(request,callback) {
+	
 }
 function getPool(num) {
 	var pool = [];
@@ -184,14 +186,17 @@ function getPool(num) {
 function load(dblist) {
 	var dbs = {};
 	for(var d in dblist) {
-		dbs[d.toUpperCase()] = db.create(d);
+		var jsondb = db.create(d);
+		jsondb.users = dblist[d].users;
+		jsondb.settings.locking = "record";
+		jsondb.settings.maxconnections = settings.maxconnections;
 		fs.exists(dblist[d].file, function (exists) {
 			if(exists)
-				dbs[d.toUpperCase()].load(dblist[d].file);
+				jsondb.load(dblist[d].file);
 			else
 				log('database file not found: ' + dblist[d].file,LOG_ERROR);
 		});		
-		dbs[d.toUpperCase()].users = dblist[d].users;
+		dbs[d.toUpperCase()] = jsondb;
 	}
 	return dbs;
 }
@@ -204,7 +209,7 @@ function init() {
 	
 	settings = require('./settings/settings');
 	dblist = require('./settings/databases');
-	//users = require('./settings/users');
+	users = require('./settings/users');
 	
 	identities = getPool(settings.maxconnections);
 	databases = load(dblist);
