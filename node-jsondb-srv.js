@@ -1,19 +1,49 @@
-/* 	node.js json shared-object database 
+/** node.js json shared-object database socket service - mcmlxxix - 2016
 	
 	all packets are to be in JSON format, terminated by a CRLF
 		
-	<database_query>:{
+	REQUEST:{
 		id		: <request id>,
 		db 		: <database name>,
 		oper	: <operation>,
-		data	: <record query>
+		data	: <see below>,
+		user	: <username (auth only)>,
+		pass	: <password (auth only)>
 	}
 	
-*/
+	READ QUERY
+		data = [
+			{ path:"path/to/data" },
+			...
+		];
+	
+	WRITE QUERY
+		data = [
+			{ path:"path/to/data", key:"child_property", value:"value_to_be_written" },
+			...
+		];
+	
+	LOCK QUERY
+		data = [
+			{ path:	"path/to/data", lock: <see lock types> },
+			...
+		];
+		
+	SUBSCRIPTION QUERY
+		data = [
+			{ path:	"path/to/data" },
+			...
+		];
+		
+	LOCK TYPES
+		read = "r"
+		write = "w"
+		append = "a"	
+	
+**/
 
 /* global variables */
-var fs, db, net, srv, rl, settings, dblist, databases, identities, users;
-log = require('./lib/log');
+var fs, db, net, srv, rl, tx, pako, log, settings, dblist, databases, identities, users;
 
 /* constants */
 const LOG_INFO = 1;
@@ -27,6 +57,17 @@ const ERROR_INVALID_LOCK = 2;
 const ERROR_INVALID_PATH = 3;
 const ERROR_INVALID_DB = 4;
 const ERROR_INVALID_OPER = 5;
+const ERROR_INVALID_USER = 6;
+const ERROR_INVALID_PASS = 7;
+
+/* operations */
+const READ = 		0;
+const WRITE = 		1;
+const LOCK = 		2;
+const UNLOCK = 		3;
+const SUBSCRIBE = 	4;
+const UNSUBSCRIBE = 5;
+const AUTH = 		6;
 
 /* server events */
 function onError(e) {
@@ -56,7 +97,6 @@ function onConnection(socket) {
 		output:socket
 	});
 	socket.rl.on('line',function(data) {
-		log('<< ' + data,LOG_DEBUG);
 		parseRequest(socket,data);
 	});
 	socket.on('close',function() {
@@ -81,11 +121,28 @@ function onConnection(socket) {
 		case ERROR_INVALID_DB:
 			respond(socket,'ERROR: invalid database: ' + txt);
 			break;
+		case ERROR_INVALID_USER:
+			respond(socket,'ERROR: invalid user: ' + txt);
+			break;
+		case ERROR_INVALID_PASS:
+			respond(socket,'ERROR: invalid password: ' + txt);
+			break;
 		default:
 			respond(socket,'ERROR: unknown: ' + txt);
 			break;
 		}
 	});
+	socket.on('json_error',function(e,txt) {
+		switch(e) {
+		case ERROR_INVALID_REQUEST:
+			respond(socket,'ERROR: JSON parsing failed: ' + txt);
+			break;
+		default:
+			respond(socket,'ERROR: unknown: ' + txt);
+			break;
+		}
+	});
+	
 }
  
 /* server functions */
@@ -93,7 +150,9 @@ function parseRequest(socket,data) {
 	var request = undefined;
 	var result = undefined;
 	try {
-		request = JSON.parse(data);
+		//data = pako.inflate(data,{to:'string'});
+		log('<< ' + request,LOG_DEBUG);
+		request = tx.decode(JSON.parse(data));
 	} 
 	catch(e) {
 		socket.emit('json_error',ERROR_INVALID_REQUEST);
@@ -132,26 +191,26 @@ function handleRequest(socket,request) {
 		request.id = socket.id;
 	}
 	//var startTime = Date.now();
-	switch(request.oper.toUpperCase()) {
-	case "AUTH":
-		authenticate(request,callback);
+	switch(request.oper) {
+	case AUTH:
+		authenticate(socket,request,callback,d);
 		break;
-	case "READ":
+	case READ:
 		d.read(request,callback);
 		break;
-	case "WRITE":
+	case WRITE:
 		d.write(request,callback);
 		break;
-	case "LOCK":
+	case LOCK:
 		d.lock(request,callback);
 		break;
-	case "UNLOCK":
+	case UNLOCK:
 		d.unlock(request,callback);
 		break;
-	case "SUBSCRIBE":
+	case SUBSCRIBE:
 		d.subscribe(request,callback);
 		break;
-	case "UNSUBSCRIBE":
+	case UNSUBSCRIBE:
 		d.unsubscribe(request,callback);
 		break;
 	default:
@@ -170,12 +229,23 @@ function handleRequest(socket,request) {
 	return true;
 }
 function respond(socket,response) {
-	var str = JSON.stringify(response) + "\r\n";
-	log('>> ' + str,LOG_DEBUG);
-	return socket.write(str);
+	response = JSON.stringify(tx.encode(response));
+	log('>> ' + response,LOG_DEBUG);
+	//response = pako.deflate(response,{to:'string'});
+	return socket.write(response + "\r\n");
 }
-function authenticate(request,callback) {
-	
+function authenticate(socket,request,callback,database) {
+	if(users[request.user] && database.users && database.users[request.user]) {
+		var usr = users[request.user];
+		if(usr.password.toLowerCase() == request.pass.toLowerCase()) 
+			return true;
+		else 
+			socket.emit('db_error',ERROR_INVALID_PASS);
+	}
+	else {
+		socket.emit('db_error',ERROR_INVALID_USER);
+	}
+	return false;
 }
 function getPool(num) {
 	var pool = [];
@@ -202,10 +272,13 @@ function load(dblist) {
 }
 function init() {
 
+	log = require('./lib/log');
+	tx = require('./lib/transform');
 	net = require('net');
 	fs = require('fs');
 	rl = require('readline');
 	db = require('node-jsondb');
+	//pako = require('pako');
 	
 	settings = require('./settings/settings');
 	dblist = require('./settings/databases');
