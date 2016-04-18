@@ -1,9 +1,11 @@
 databases = {
 	test:{
-		file:	"./db/test.json",
+		file:		"./db/test.json",
+		locking:	"transaction",
 		users:{
-			admin:	"w",
-			guest:	"r"
+			admin:	"rw",
+			guest:	"r",
+			test:	"rw"
 		}
 	}/*,
 	example:{
