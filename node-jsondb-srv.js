@@ -166,7 +166,8 @@ function handleRequest(socket,request) {
 			// request.id = socket.id;
 		//request.data = response;
 		//request.elapsed = endTime - startTime;
-		return respond(socket,request);
+		response.qid = request.qid;
+		return respond(socket,response);
 	}
 	return true;
 }
