@@ -199,7 +199,7 @@ function authenticate(socket,request,callback,database) {
 		request.status = err.INVALID_USER;
 		delete socket.user;
 	}
-	callback(usr);
+	callback(request);
 	return true;
 }
 function getpool(num) {
