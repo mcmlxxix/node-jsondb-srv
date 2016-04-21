@@ -116,6 +116,7 @@ function parseRequest(socket,data) {
 	return result;
 }
 function handleRequest(socket,request) {
+	//var startTime = Date.now();
 	if(request.id == null) {
 		request.id = socket.id;
 	}
@@ -135,30 +136,56 @@ function handleRequest(socket,request) {
 	if(socket.user == null) {
 		return sendError(socket,request,err.AUTH_REQD);
 	}
-	//var startTime = Date.now();
-	switch(request.oper) {
-	case oper.READ:
-		d.read(request,callback);
-		break;
-	case oper.WRITE:
-		d.write(request,callback);
-		break;
-	case oper.LOCK:
-		d.lock(request,callback);
-		break;
-	case oper.UNLOCK:
-		d.unlock(request,callback);
-		break;
-	case oper.SUBSCRIBE:
-		d.subscribe(request,callback);
-		break;
-	case oper.UNSUBSCRIBE:
-		d.unsubscribe(request,callback);
-		break;
-	default:
-		sendError(socket,request,err.INVALID_OPER);
-		break;
+	if(canWrite(database,user)) {
+		switch(request.oper) {
+		case oper.READ:
+			d.read(request,callback);
+			break;
+		case oper.WRITE:
+			d.write(request,callback);
+			break;
+		case oper.LOCK:
+			d.lock(request,callback);
+			break;
+		case oper.UNLOCK:
+			d.unlock(request,callback);
+			break;
+		case oper.SUBSCRIBE:
+			d.subscribe(request,callback);
+			break;
+		case oper.UNSUBSCRIBE:
+			d.unsubscribe(request,callback);
+			break;
+		default:
+			sendError(socket,request,err.INVALID_OPER);
+			break;
+		}	
 	}
+	else if(canRead(database,user)) {
+		switch(request.oper) {
+		case oper.WRITE:
+		case oper.LOCK:
+		case oper.UNLOCK:
+			sendError(socket,request,err.NOT_AUTHORIZED);
+			break;
+		case oper.READ:
+			d.read(request,callback);
+			break;
+		case oper.SUBSCRIBE:
+			d.subscribe(request,callback);
+			break;
+		case oper.UNSUBSCRIBE:
+			d.unsubscribe(request,callback);
+			break;
+		default:
+			sendError(socket,request,err.INVALID_OPER);
+			break;
+		}	
+	}
+	else {
+		sendError(socket,request,err.NOT_AUTHORIZED);
+	}
+
 	
 	function callback(response) {
 		//var endTime = process.hrtime();
@@ -183,7 +210,7 @@ function respond(socket,response) {
 }
 function authenticate(socket,request,callback,database) {
 	var usr = request.data;
-	if(users[usr.name] && database.users && database.users[usr.name]) {
+	if(users[usr.name]) {
 		var pw = users[usr.name];
 		var hash = crypto.createHash('md5').update(pw).digest('hex');
 		if(hash == usr.pass) {
@@ -201,6 +228,16 @@ function authenticate(socket,request,callback,database) {
 	}
 	callback(request);
 	return true;
+}
+function canWrite(database,user) {
+	if(database.users[user.name] == null)
+		return false;
+	return /w/.test(database.users[user.name]);
+}
+function canRead(user) {
+	if(database.users[user.name] == null)
+		return false;
+	return /r/.test(database.users[user.name]);
 }
 function getpool(num) {
 	var pool = [];
