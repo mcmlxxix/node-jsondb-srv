@@ -227,15 +227,16 @@ function load(dblist) {
 }
 function init() {
 
-	log = require('./lib/log');
-	err = require('./lib/constant').error;
-	oper = require('./lib/constant').oper;
+	var con = require('./lib/constant');
+	err = con.error;
+	oper = con.oper;
 	tx = require('./lib/transform');
 	
+	log = require('node-logger');
+	db = require('node-jsondb');
 	net = require('net');
 	fs = require('fs');
 	rl = require('readline');
-	db = require('node-jsondb');
 	crypto = require('crypto');
 	//pako = require('pako');
 	

@@ -1,7 +1,7 @@
 settings = {
-	"host":		"localhost",
-	"port":		10089,
-	"maxconnections": 200
+	"host":				"localhost",
+	"port":				10089,
+	"maxconnections": 	200
 }
 
 /* dont fuck with me */

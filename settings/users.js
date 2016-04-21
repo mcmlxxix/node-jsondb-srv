@@ -7,7 +7,7 @@
 users = {	/* 	<name> 			:	<password> */
 				"test"			:	"test",
 				"guest"			:	"",
-				"admin"			:	"adminP@$$"
+				"admin"			:	"admin"
 }
 
 /* dont touch this shit */

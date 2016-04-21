@@ -4,8 +4,7 @@ databases = {
 		locking:	"transaction",
 		users:{
 			admin:	"rw",
-			guest:	"r",
-			test:	"rw"
+			guest:	"r"
 		}
 	}/*,
 	example:{
