@@ -28,8 +28,6 @@
     "objects"
   ],
   "dependencies": {
-    "node-ansi": "git://github.com/mcmlxxix/node-ansi.git",
-    "node-jpath": "git://github.com/mcmlxxix/node-jpath.git",
     "node-jsondb": "git://github.com/mcmlxxix/node-jsondb.git",
     "node-logger": "git://github.com/mcmlxxix/node-logger.git"
   }
