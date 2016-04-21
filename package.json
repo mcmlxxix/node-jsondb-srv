@@ -1,22 +1,36 @@
 {
-	"name": "node-jsondb-srv",
-	"description": "jsondb-service: Socket service to accept json database client connections and requests for the json database",
-	"version": "1.0.0",
-	"author": {
-		"name": "Matt Johnson",
-		"email": "mdj1979@gmail.com"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git://github.com/mcmlxxix/node-jsondb-srv.git"
-	},
-	"bugs": {
-		"url": "https://github.com/mcmlxxix/node-jsondb-srv/issues"
-	},
-	"licenses": [{
-		"type": "MIT",
-		"url": "https://github.com/mcmlxxix/node-jsondb-srv/LICENSE-MIT"
-	}],
-	"main": "./node-jsondb-srv",
-	"keywords": ["utility", "json", "database", "jpath", "objects"]
+  "name": "node-jsondb-srv",
+  "description": "jsondb-service: Socket service to accept json database client connections and requests for the json database",
+  "version": "1.0.0",
+  "author": {
+    "name": "Matt Johnson",
+    "email": "mdj1979@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mcmlxxix/node-jsondb-srv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mcmlxxix/node-jsondb-srv/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/mcmlxxix/node-jsondb-srv/LICENSE"
+    }
+  ],
+  "main": "./node-jsondb-srv",
+  "keywords": [
+    "utility",
+    "json",
+    "database",
+    "jpath",
+    "objects"
+  ],
+  "dependencies": {
+    "node-ansi": "git://github.com/mcmlxxix/node-ansi.git",
+    "node-jpath": "git://github.com/mcmlxxix/node-jpath.git",
+    "node-jsondb": "git://github.com/mcmlxxix/node-jsondb.git",
+    "node-logger": "git://github.com/mcmlxxix/node-logger.git"
+  }
 }
