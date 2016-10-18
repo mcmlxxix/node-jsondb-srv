@@ -136,7 +136,7 @@ function handleRequest(socket,request) {
 	if(socket.user == null) {
 		return sendError(socket,request,err.AUTH_REQD);
 	}
-	if(canWrite(database,user)) {
+	if(canWrite(d,user)) {
 		switch(request.oper) {
 		case oper.READ:
 			d.read(request,callback);
@@ -161,7 +161,7 @@ function handleRequest(socket,request) {
 			break;
 		}	
 	}
-	else if(canRead(database,user)) {
+	else if(canRead(d,user)) {
 		switch(request.oper) {
 		case oper.WRITE:
 		case oper.LOCK:
@@ -234,7 +234,7 @@ function canWrite(database,user) {
 		return false;
 	return /w/.test(database.users[user.name]);
 }
-function canRead(user) {
+function canRead(database,user) {
 	if(database.users[user.name] == null)
 		return false;
 	return /r/.test(database.users[user.name]);
@@ -264,9 +264,9 @@ function load(dblist) {
 }
 function init() {
 
-	var con = require('./lib/constant');
-	err = con.error;
-	oper = con.oper;
+	var defs = require('./lib/defs');
+	err = defs.error;
+	oper = defs.oper;
 	tx = require('./lib/transform');
 	
 	log = require('node-logger');
